@@ -51,6 +51,11 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 public class AbaplintBuilder extends IncrementalProjectBuilder {
 
+	public static final String BUILDER_ID = "org.abaplint.eclipse.abaplintBuilder";
+	private static final String MARKER_TYPE = "org.abaplint.eclipse.abaplintProblem";
+	private static ScriptEngine engine = null;
+
+	
 	class SampleDeltaVisitor implements IResourceDeltaVisitor {
 
 		public boolean visit(IResourceDelta delta) throws CoreException {
@@ -64,6 +69,8 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 			case IResourceDelta.CHANGED:
 				checkABAP(resource);
 				break;
+		    default: // do nothing
+		        break;				
 			}
 			return true;
 		}
@@ -77,19 +84,12 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 		}
 	}
 
-	public static final String BUILDER_ID = "org.abaplint.eclipse.abaplintBuilder";
-
-	private static final String MARKER_TYPE = "org.abaplint.eclipse.abaplintProblem";
-
 	private void addMarker(IFile file, String message, int lineNumber,
 			int severity) {
 		try {
 			IMarker marker = file.createMarker(MARKER_TYPE);
 			marker.setAttribute(IMarker.MESSAGE, message);
 			marker.setAttribute(IMarker.SEVERITY, severity);
-			if (lineNumber == -1) {
-				lineNumber = 1;
-			}
 			marker.setAttribute(IMarker.LINE_NUMBER, lineNumber);
 		} catch (CoreException e) {
 		}
@@ -146,8 +146,6 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 		return sb.toString();
 	}
 
-	private static ScriptEngine engine = null;
-
 	private ScriptEngine getEngine() throws IOException, ScriptException {
 		if (engine != null) {
 			return engine;
@@ -190,7 +188,7 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 		}
 	}
 
-	void checkABAP(IResource resource) {
+	private void checkABAP(IResource resource) {
 		if (resource instanceof IFile
 				&& (resource.getName().endsWith(".asprog")
 						|| resource.getName().endsWith(".aclass")
