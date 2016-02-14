@@ -1,3 +1,5 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/grade/56f3e9fbccd54a43b29c5dcaab37ea41)](https://www.codacy.com/app/larshp/abaplint-eclipse)
+
 # abaplint-eclipse
 
 [abaplint](https://github.com/larshp/abaplint) plugin for ABAP in Eclipse
