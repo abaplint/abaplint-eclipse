@@ -1,30 +1,42 @@
 package org.abaplint.eclipse.builder;
 
 /*
-The MIT License (MIT)
+ The MIT License (MIT)
 
-Copyright (c) 2016 Lars Hvam
+ Copyright (c) 2016 Lars Hvam
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.script.Invocable;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
@@ -60,7 +72,7 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 	class SampleResourceVisitor implements IResourceVisitor {
 		public boolean visit(IResource resource) {
 			checkABAP(resource);
-			//return true to continue visiting children.
+			// return true to continue visiting children.
 			return true;
 		}
 	}
@@ -83,8 +95,8 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 		}
 	}
 
-	protected IProject[] build(int kind, Map<String, String> args, IProgressMonitor monitor)
-			throws CoreException {
+	protected IProject[] build(int kind, Map<String, String> args,
+			IProgressMonitor monitor) throws CoreException {
 		if (kind == FULL_BUILD) {
 			fullBuild(monitor);
 		} else {
@@ -102,18 +114,93 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 		getProject().deleteMarkers(MARKER_TYPE, true, IResource.DEPTH_INFINITE);
 	}
 
+	private String readJS() throws IOException {
+		String bundle = "";
+		String filename = System.getProperty("user.home")
+				+ "/Desktop/bundle.js";
+
+		BufferedReader reader = new BufferedReader(new FileReader(filename));
+
+		while (true) {
+			String line = reader.readLine();
+			if (line == null) {
+				break;
+			}
+			bundle = bundle + line;
+		}
+		reader.close();
+
+		return bundle;
+	}
+
+	private String readStream(InputStream in) throws IOException {
+		StringBuilder sb = new StringBuilder();
+		BufferedReader br = new BufferedReader(new InputStreamReader(in));
+		String read = "";
+
+		while ((read = br.readLine()) != null) {
+			sb.append(read + "\n");
+		}
+
+		br.close();
+		return sb.toString();
+	}
+
+	private static ScriptEngine engine = null;
+
+	private ScriptEngine getEngine() throws IOException, ScriptException {
+		if (engine != null) {
+			return engine;
+		}
+
+		String script = readJS();
+
+		ScriptEngineManager manager = new ScriptEngineManager();
+		engine = manager.getEngineByName("JavaScript");
+
+		engine.eval(script);
+
+		return engine;
+	}
+
+	private void reportErrors(IFile file, String json) {
+		String pattern = "\"row\": \"(\\d+)\", \"text\": \"([\\w ,.]+)\"";
+
+		Pattern r = Pattern.compile(pattern);
+		Matcher m = r.matcher(json);
+
+		while (m.find()) {
+			addMarker(file, m.group(2), Integer.parseInt(m.group(1)),
+					IMarker.SEVERITY_ERROR);
+		}
+	}
+
+	private void runFile(IFile file) {
+		try {
+			Invocable inv = (Invocable) getEngine();
+			Object obj = engine.get("run");
+			String contents = readStream(file.getContents());
+			String lintResult = (String) inv.invokeMethod(obj, "run_file",
+					contents);
+			System.out.println(lintResult);
+			reportErrors(file, lintResult);
+		} catch (NoSuchMethodException | ScriptException | CoreException
+				| IOException e) {
+			addMarker(file, e.toString(), 1, IMarker.SEVERITY_ERROR);
+		}
+	}
+
 	void checkABAP(IResource resource) {
-		if (resource instanceof IFile 
-				&& ( resource.getName().endsWith(".asprog")
-				|| resource.getName().endsWith(".aclass")
-				|| resource.getName().endsWith(".acinc")
-				|| resource.getName().endsWith(".asfugr")
-				|| resource.getName().endsWith(".aint"))) {		
+		if (resource instanceof IFile
+				&& (resource.getName().endsWith(".asprog")
+						|| resource.getName().endsWith(".aclass")
+						|| resource.getName().endsWith(".acinc")
+						|| resource.getName().endsWith(".asfugr") || resource
+						.getName().endsWith(".aint"))) {
 			IFile file = (IFile) resource;
 			deleteMarkers(file);
-			
-			addMarker(file, "blah", 1, IMarker.SEVERITY_ERROR);
-// file.getContents()
+
+			runFile(file);
 		}
 	}
 
@@ -134,7 +221,7 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 
 	protected void incrementalBuild(IResourceDelta delta,
 			IProgressMonitor monitor) throws CoreException {
-		// the visitor does the work.
+		// the visitor does the work
 		delta.accept(new SampleDeltaVisitor());
 	}
 }
