@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         id="abaplintBuilder"
+         name="Abaplint Project Builder"
+         point="org.eclipse.core.resources.builders">
+      <builder
+            hasNature="true">
+         <run
+               class="org.abaplint.eclipse.builder.AbaplintBuilder">
+         </run>
+      </builder>
+   </extension>
+   <extension
+         id="abaplintNature"
+         name="Abaplint Project Nature"
+         point="org.eclipse.core.resources.natures">
+      <runtime>
+         <run
+               class="org.abaplint.eclipse.builder.AbaplintNature">
+         </run>
+      </runtime>
+      <builder
+            id="org.abaplint.eclipse.abaplintBuilder">
+      </builder>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            name="Abaplint Project Nature commands"
+            id="org.abaplint.eclipse.abaplintNature.category">
+      </category>
+      <command
+            name="Add/RemoveAbaplint Project Nature"
+            defaultHandler="org.abaplint.eclipse.builder.AddRemoveAbaplintNatureHandler"
+            categoryId="org.abaplint.eclipse.abaplintNature.category"
+            id="org.abaplint.eclipse.addRemoveAbaplintNature">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="popup:org.eclipse.ui.projectConfigure?after=additions">
+         <command
+               commandId="org.abaplint.eclipse.addRemoveAbaplintNature"
+               label="Disable abaplint"
+               style="push">
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="selection">
+                  <count
+                        value="1">
+                  </count>
+                  <iterate>
+                     <adapt
+                           type="org.eclipse.core.resources.IProject">
+                        <test
+                              value="org.abaplint.eclipse.abaplintNature"
+                              property="org.eclipse.core.resources.projectNature">
+                        </test>
+                     </adapt>
+                  </iterate>
+               </with>
+            </visibleWhen>
+         </command>
+         <command
+               commandId="org.abaplint.eclipse.addRemoveAbaplintNature"
+               label="Enable abaplint"
+               style="push">
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="selection">
+                  <count
+                        value="1">
+                  </count>
+                  <iterate>
+                     <adapt
+                           type="org.eclipse.core.resources.IProject">
+                        <not>
+                           <test
+                                 value="org.abaplint.eclipse.abaplintNature"
+                                 property="org.eclipse.core.resources.projectNature">
+                           </test>
+                        </not>
+                     </adapt>
+                  </iterate>
+               </with>
+            </visibleWhen>
+         </command>
+      </menuContribution>
+   </extension>
+   <extension
+         id="abaplintProblem"
+         name="abaplint Problem"
+         point="org.eclipse.core.resources.markers">
+      <super
+            type="org.eclipse.core.resources.problemmarker">
+      </super>
+      <persistent
+            value="true">
+      </persistent>
+   </extension>
+
+</plugin>
