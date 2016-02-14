@@ -11,3 +11,5 @@
 4. Right click ABAP project -> Configure -> Enable abaplint
 
 Note that the first few times it is slow, see http://pieroxy.net/blog/2015/06/29/node_js_vs_java_nashorn.html
+
+![example](https://cloud.githubusercontent.com/assets/5888506/13034067/685d6724-d32b-11e5-883d-11a2906b359a.png)
