@@ -29,7 +29,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -113,22 +115,22 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 	protected void clean(IProgressMonitor monitor) throws CoreException {
 		getProject().deleteMarkers(MARKER_TYPE, true, IResource.DEPTH_INFINITE);
 	}
-
+	private static String convertStreamToString(java.io.InputStream is) {
+		String contents="";
+	    Scanner s=null;
+	    try{
+	    	s = new Scanner(is);
+	    	s.useDelimiter("\\A");
+  	    	contents = s.hasNext() ? s.next() : "";
+	    }finally {
+	    	if(s!=null)s.close();
+	    }
+	    return contents;
+	}
 	private String readJS() throws IOException {
-		String bundle = "";
-		String filename = System.getProperty("user.home")
-				+ "/Desktop/bundle.js";
-
-		BufferedReader reader = new BufferedReader(new FileReader(filename));
-
-		while (true) {
-			String line = reader.readLine();
-			if (line == null) {
-				break;
-			}
-			bundle = bundle + line;
-		}
-		reader.close();
+		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+		InputStream input = classLoader.getResourceAsStream("bundle/bundle.js");
+		String bundle = convertStreamToString(input);
 
 		return bundle;
 	}
