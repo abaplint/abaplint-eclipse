@@ -25,15 +25,11 @@ package org.abaplint.eclipse.builder;
  */
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringWriter;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
@@ -55,6 +51,7 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 
 	public static final String BUILDER_ID = "org.abaplint.eclipse.abaplintBuilder";
 	private static final String MARKER_TYPE = "org.abaplint.eclipse.abaplintProblem";
+	private static final String C_ABAPLINT = "AbapLint:";
 	private static ScriptEngine engine = null;
 
 	
@@ -122,6 +119,8 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 	    	s = new Scanner(is);
 	    	s.useDelimiter("\\A");
   	    	contents = s.hasNext() ? s.next() : "";
+	    }catch(Exception e) {
+	    	e.printStackTrace(System.err);
 	    }finally {
 	    	if(s!=null)s.close();
 	    }
@@ -129,9 +128,9 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 	}
 	private String readJS() throws IOException {
 		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-		InputStream input = classLoader.getResourceAsStream("bundle/bundle.js");
+		InputStream input;
+		input = classLoader.getResourceAsStream("/bundle/bundle.js");
 		String bundle = convertStreamToString(input);
-
 		return bundle;
 	}
 
@@ -159,34 +158,43 @@ public class AbaplintBuilder extends IncrementalProjectBuilder {
 		engine = manager.getEngineByName("JavaScript");
 
 		engine.eval(script);
+		engine.eval(
+				"function run(name, contents) {\n" + 
+				"  var file = new abaplint.File(name, contents);\n" + 
+				"  var rules = [];\n" + 
+				"  abaplint.Runner.run([file]).forEach(function(issue) {\n" + 
+				"    rules.push({\n" + 
+				"      description: issue.getRule().getDescription(),\n" + 
+				"      start: issue.start.row\n" + 
+				"    });\n" + 
+				"  });\n" + 
+				"  return rules;\n" + 
+				"}");		
 
 		return engine;
 	}
 
-	private void reportErrors(IFile file, String json) {
-		String pattern = "\"row\": \"(\\d+)\", \"text\": \"([\\w ,.]+)\"";
-
-		Pattern r = Pattern.compile(pattern);
-		Matcher m = r.matcher(json);
-
-		while (m.find()) {
-			addMarker(file, m.group(2), Integer.parseInt(m.group(1)),
-					IMarker.SEVERITY_ERROR);
+	private void reportErrors(IFile file, Map<String,Object> results) {
+		for(int i = 0;i<results.size();i++) {
+			@SuppressWarnings("unchecked")
+			Map<String,Object>  result = (Map<String,Object> ) results.get(String.valueOf(i));
+			int start = ((Double)result.get("start")).intValue();
+			addMarker(file,C_ABAPLINT+(String) result.get("description"), start,IMarker.SEVERITY_WARNING);
 		}
 	}
 
 	private void runFile(IFile file) {
 		try {
 			Invocable inv = (Invocable) getEngine();
-			Object obj = engine.get("run");
 			String contents = readStream(file.getContents());
-			String lintResult = (String) inv.invokeMethod(obj, "run_file",
-					contents);
-			System.out.println(lintResult);
+			@SuppressWarnings("unchecked")
+			Map<String,Object>  lintResult = (Map<String,Object> ) inv.invokeFunction("run", "run_file",contents);	
 			reportErrors(file, lintResult);
 		} catch (NoSuchMethodException | ScriptException | CoreException
 				| IOException e) {
-			addMarker(file, e.toString(), 1, IMarker.SEVERITY_ERROR);
+			addMarker(file,C_ABAPLINT+ e.toString(), 1, IMarker.SEVERITY_WARNING);	
+		}catch (IllegalStateException e) {
+//			addMarker(file,C_ABAPLINT+ "Failed to read source (User not logged in?)", 1, IMarker.SEVERITY_INFO);			
 		}
 	}
 

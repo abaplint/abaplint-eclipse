@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/com.abaplint.feature.eclipse_1.0.0.201808250807.jar" id="com.abaplint.feature.eclipse" version="1.0.0.201808250807">
+      <category name="abaplint"/>
+   </feature>
+   <category-def name="abaplint" label="ABAP Lint"/>
+</site>
