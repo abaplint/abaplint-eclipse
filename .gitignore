@@ -1,0 +1,6 @@
+org.abaplint.eclipse/bin/
+org.abaplint.eclipse/src/bundle/bundle.js
+abaplint.site/*.jar
+abaplint.site/features
+abaplint.site/plugins
+
