@@ -1,3 +1,7 @@
+# DEPRECATED
+
+Running Javascript inside Java was really slow. Plus abaplint requires abapGit naming for it to work properly. Currently this project is not maintained, an alternative approach is needed for making abaplint work in ADT.
+
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/56f3e9fbccd54a43b29c5dcaab37ea41)](https://www.codacy.com/app/larshp/abaplint-eclipse)
 
 # abaplint-eclipse
