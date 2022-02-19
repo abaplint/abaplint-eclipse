@@ -1,6 +1,6 @@
 # DEPRECATED
 
-Use https://github.com/abaplint/abaplint-cloud-foundry instead
+Use https://github.com/abaplint/abaplint-sci-server instead
 
 ~~Running Javascript inside Java was really slow. Plus abaplint requires abapGit naming for it to work properly. Currently this project is not maintained, an alternative approach is needed for making abaplint work in ADT.~~
 
